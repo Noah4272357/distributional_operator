@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# ML outputs
+checkpoints/
+runs/
+wandb/
+*.pt
+*.pth
+
+# Data if large
+data/
+*.h5
+
+# Experiments
+experiments/
+*.log

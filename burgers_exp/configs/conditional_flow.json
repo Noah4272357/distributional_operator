@@ -1,0 +1,66 @@
+{
+  "seed": 42,
+  "data": {
+    "input_path": "dataset/generated_data_1400/solution.hdf5",
+    "input_dataset": "solution",
+    "target_path": "dataset/generated_data_1400/initial.hdf5",
+    "target_dataset": "initial",
+    "train_size": 1000,
+    "validation_size": 200,
+    "batch_size": 8,
+    "num_workers": 0,
+    "pin_memory": true
+  },
+  "model": {
+    "name": "deep_set_conditional_flow",
+    "sample_embed_dim": 128,
+    "context_dim": 128,
+    "encoder_hidden_dim": 256,
+    "encoder_phi_layers": 2,
+    "encoder_rho_layers": 2,
+    "aggregation": "mean_std",
+    "num_flow_layers": 8,
+    "flow_hidden_dim": 256,
+    "coupling_hidden_layers": 2,
+    "scale_limit": 2.0,
+    "temperature": 1.0
+  },
+  "loss": {
+    "name": "sinkhorn",
+    "p": 2,
+    "blur": 0.05,
+    "debias": true,
+    "scaling": 0.5,
+    "backend": "auto",
+    "reduction": "mean"
+  },
+  "optimizer": {
+    "name": "adamw",
+    "lr": 0.001,
+    "weight_decay": 0.01
+  },
+  "scheduler": {
+    "name": "reduce_lr_on_plateau",
+    "mode": "min",
+    "factor": 0.5,
+    "patience": 5,
+    "threshold": 1.0e-4,
+    "threshold_mode": "rel",
+    "cooldown": 0,
+    "min_lr": 1.0e-6,
+    "eps": 1.0e-8
+  },
+  "training": {
+    "epochs": 1000,
+    "device": "cuda:0",
+    "grad_clip": 1.0,
+    "log_every": 1
+  },
+  "checkpoint": {
+    "save_best": true,
+    "save_last": true
+  },
+  "experiment": {
+    "root": "experiments"
+  }
+}

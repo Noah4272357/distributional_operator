@@ -1,0 +1,39 @@
+{
+  "seed": 42,
+  "data": {
+    "input_path": "dataset/generated_data_1400/solution.hdf5",
+    "input_dataset": "solution",
+    "target_path": "dataset/generated_data_1400/initial.hdf5",
+    "target_dataset": "initial",
+    "train_size": 1000,
+    "validation_size": 200,
+    "law_sample_count": 64,
+    "query_batch_size": 2
+  },
+  "model": {
+    "name": "kernel_regression",
+    "bandwidth_candidates": [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0],
+    "sinkhorn_p": 2,
+    "sinkhorn_blur": 0.05,
+    "sinkhorn_debias": true,
+    "sinkhorn_scaling": 0.5,
+    "sinkhorn_backend": "tensorized",
+    "reference_chunk_size": 4
+  },
+  "loss": {
+    "name": "sinkhorn",
+    "p": 2,
+    "blur": 0.05,
+    "debias": true,
+    "scaling": 0.5,
+    "backend": "tensorized",
+    "reduction": "mean"
+  },
+  "training": {
+    "device": "cuda:0"
+  },
+  "experiment": {
+    "root": "experiments",
+    "run_name": "kernel_regression_geomloss"
+  }
+}

@@ -1,0 +1,35 @@
+seed: 0
+schema_version: 2
+output_dir: dataset/generated/McKean_Vlasov
+filename: McKean_Vlasov.h5
+
+# These defaults can be replaced by --data_size, --sample_size, and --grid_size.
+data_size: 48
+sample_size: 16
+grid_size: 32
+coefficient_rank: 4
+domain_min: 0.0
+domain_max: 1.0
+
+split:
+  train_fraction: 0.6666666667
+  val_fraction: 0.1666666667
+
+input_law:
+  mean_low: -1.0
+  mean_high: 1.0
+  sigma_low: 0.15
+  sigma_high: 0.8
+  jitter: 0.0001
+
+basis:
+  rank: null
+  explained_variance_threshold: 0.9999
+  min_rank: 1
+  max_rank: 8
+
+mckean_vlasov:
+  kappa: 0.01
+  a: 1.0
+  b: 0.8
+  T: 0.5

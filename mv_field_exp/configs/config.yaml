@@ -1,0 +1,57 @@
+experiment:
+  name: McKean_Vlasov_deepsets_smoke
+  seed: 0
+  save_path: experiments
+  device: cuda
+  epochs: 10
+  batch_size: 8
+  num_workers: 0
+  pin_memory: false
+
+generated_data:
+  name: McKean_Vlasov
+  schema_version: 2
+  path: dataset/generated/McKean_Vlasov
+  file: dataset/generated/McKean_Vlasov/McKean_Vlasov.h5
+  files:
+    manifest: dataset/generated/McKean_Vlasov/manifest.yaml
+    basis_metadata: dataset/generated/McKean_Vlasov/basis_metadata.yaml
+    projection_summary: dataset/generated/McKean_Vlasov/projection_summary.yaml
+    generation_summary: dataset/generated/McKean_Vlasov/generation_summary.yaml
+  output_protocol: learned_output_basis_gaussian
+  target:
+    name: McKean_Vlasov
+    target_distribution_role: gaussian_exact
+    main_gaussian_nll_interpretation: matched
+
+random_field_view:
+  input_representation: learned_basis_projected
+  output_protocol: learned_output_basis_gaussian
+  context_particles: null
+  output_particles: null
+
+standardization: {enabled: false, input: true, output: true, epsilon: 1.0e-6}
+model: {name: deepsets, inner_width: 64, inner_layers: 2, embedding_dim: 64, outer_width: 128, outer_layers: 3, activation: gelu, initial_scale: 0.1, covariance_structure: full}
+loss: {name: gaussian_nll, covariance_epsilon: 1.0e-5}
+optimizer:
+  name: adamw
+  lr: 1.0e-3
+  weight_decay: 0.01
+
+scheduler:
+  name: reduce_lr_on_plateau
+  mode: min
+  factor: 0.5
+  patience: 5
+  threshold: 1.0e-4
+  threshold_mode: rel
+  cooldown: 0
+  min_lr: 1.0e-6
+  eps: 1.0e-8
+metrics:
+  predicted_field_samples: 16
+  sinkhorn: {enabled: true, p: 2, blur: 0.05, scaling: 0.9, debias: true, backend: tensorized}
+  sliced_w2: {num_projections: 16, seed: 0}
+  mmd: {enabled: true, scales: [0.5, 1.0, 2.0, 4.0]}
+  integrated_crps: {enabled: true}
+  variogram: {enabled: true, p: 1.0, max_pairs: 128, seed: 0}
