@@ -1,0 +1,9 @@
+.venv/
+.venv_remote/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+data/generated/
+experiments/*
+!experiments/.gitkeep
+*.log

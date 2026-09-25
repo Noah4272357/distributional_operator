@@ -1,0 +1,59 @@
+experiment:
+  name: distribution_operator_1000
+  output_root: experiments/process_train_1000
+  seed: 0
+  device: cuda
+
+data:
+  process_file: data/generated/isi_process_data.h5
+  target_file: data/generated/isi_distribution_dataset.h5
+  train_size: 1000
+  val_size: 0
+  test_size: 200
+  split_seed: 0
+  batch_size: 64
+  num_workers: 0
+  pin_memory: false
+  pca:
+    explained_variance_threshold: 0.99
+    fit_chunk_size: 8192
+    enforce_minimum_dim: true
+    state_file: pca_state.pt
+
+model:
+  name: distribution_operator
+  truncate_dim: auto
+  feature_dim: 32
+  context_dim: 32
+  path_mlp:
+    hidden_width: 32
+    activation: silu
+  deepsets:
+    hidden_width: 32
+    hidden_layers: 1
+    activation: silu
+    aggregation: mean
+    dropout: 0.0
+  rho:
+    hidden_width: 32
+    hidden_layers: 1
+    activation: gelu
+
+optimizer:
+  name: adamw
+  lr: 1.0e-3
+  weight_decay: 0.01
+
+scheduler:
+  name: none
+
+training:
+  epochs: 1000
+  epoch_metrics: nll_only
+  grad_clip: null
+  save_last: true
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+  checkpoint_selection_metric: null

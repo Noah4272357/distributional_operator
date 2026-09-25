@@ -1,0 +1,99 @@
+{
+  "seed": 42,
+  "data": {
+    "input_path": "duffing_dataset/duffing_dataset.h5",
+    "input_dataset": "X",
+    "target_path": "duffing_dataset/duffing_dataset.h5",
+    "target_dataset": "Y",
+    "train_size": 1000,
+    "validation_size": 200,
+    "test_size": 200,
+    "batch_size": 8,
+    "num_workers": 0,
+    "pin_memory": true,
+    "preprocessing": {
+      "enabled": false
+    }
+  },
+  "model": {
+    "name": "momentMLP",
+    "input_encoder": {
+      "name": "mlp",
+      "feature_dim": 64,
+      "hidden_dim": 64,
+      "hidden_layers": 2,
+      "activation": "silu"
+    },
+    "distribution_encoder": {
+      "name": "deepsets",
+      "context_dim": 64,
+      "sample_embed_dim": 128,
+      "hidden_dim": 64,
+      "phi_layers": 2,
+      "rho_layers": 2,
+      "aggregation": "mean_std"
+    },
+    "generator": {
+      "name": "mlp",
+      "data_dim": 32,
+      "latent_dim": 32,
+      "hidden_dim": 64,
+      "hidden_layers": 3
+    },
+    "decoder": {
+      "name": "direct_mlp",
+      "hidden_dim": 64,
+      "hidden_layers": 2,
+      "activation": "silu"
+    },
+    "grid_min": 0,
+    "grid_max": 20,
+    "num_samples": 128,
+    "temperature": 1
+  },
+  "loss": {
+    "name": "sinkhorn",
+    "p": 2,
+    "blur": 0.05,
+    "debias": true,
+    "scaling": 0.5,
+    "backend": "auto",
+    "reduction": "mean",
+    "mean_loss_weight": 0
+  },
+  "optimizer": {
+    "name": "adamw",
+    "lr": 0.001,
+    "weight_decay": 0.01
+  },
+  "scheduler": {
+    "name": "reduce_lr_on_plateau",
+    "mode": "min",
+    "factor": 0.5,
+    "patience": 5,
+    "threshold": 0.0001,
+    "threshold_mode": "rel",
+    "cooldown": 0,
+    "min_lr": 0.000001,
+    "eps": 1e-8
+  },
+  "training": {
+    "pipeline": "standard",
+    "epochs": 1000,
+    "device": "cuda",
+    "grad_clip": 1,
+    "log_every": 1,
+    "early_stopping": {
+      "enabled": true,
+      "patience": 30,
+      "min_delta": 0.001
+    }
+  },
+  "checkpoint": {
+    "save_best": true,
+    "save_last": true
+  },
+  "experiment": {
+    "root": "experiments"
+  }
+}

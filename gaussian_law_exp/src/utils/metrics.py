@@ -18,6 +18,8 @@ VALIDATION_METRICS = (
 )
 MAIN_RESULT_MODELS = frozenset(
     {
+        "distributional_operator",
+        # Retained so checkpoints written before the model rename remain readable.
         "deepsets",
         "momentmlp",
         "moment_mlp",
@@ -397,7 +399,7 @@ def loss_metadata(loss_name: str, model_name: str) -> dict[str, Any]:
         raise ValueError(f"unsupported loss: {loss_name}")
     if model_name not in MAIN_RESULT_MODELS:
         raise ValueError(
-            f"unsupported model: {model_name}; expected deepsets, momentmlp, "
+            f"unsupported model: {model_name}; expected distributional_operator, momentmlp, "
             "or kernel_regression"
         )
     uses_artificial_pairing = loss_name == "pathwise_mse"

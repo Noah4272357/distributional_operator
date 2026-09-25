@@ -18,6 +18,18 @@ def cpu_state_dict(model: nn.Module) -> dict[str, torch.Tensor]:
     return {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
 
+def _cpu_tree(value: Any) -> Any:
+    if torch.is_tensor(value):
+        return value.detach().cpu().clone()
+    if isinstance(value, dict):
+        return {key: _cpu_tree(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_cpu_tree(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_cpu_tree(item) for item in value)
+    return value
+
+
 def save_checkpoint(
     path: str | Path,
     model: nn.Module,
@@ -26,6 +38,9 @@ def save_checkpoint(
     cfg: Any,
     optimizer: torch.optim.Optimizer | None = None,
     scheduler: Any | None = None,
+    trainer_state: dict[str, Any] | None = None,
+    preprocessing_state: dict[str, Any] | None = None,
+    checkpoint_selection_metric: str | None = CHECKPOINT_SELECTION_METRIC,
 ) -> None:
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -35,10 +50,12 @@ def save_checkpoint(
             "model_name": str(cfg.model.name),
             "model_config": config_container(cfg)["model"],
             "epoch": int(epoch),
-            "checkpoint_selection_metric": CHECKPOINT_SELECTION_METRIC,
+            "checkpoint_selection_metric": checkpoint_selection_metric,
             "best_val_observation_nll": float(best_val_observation_nll),
             "optimizer_state_dict": optimizer.state_dict() if optimizer is not None else None,
             "scheduler_state_dict": scheduler.state_dict() if scheduler is not None else None,
+            "trainer_state": trainer_state,
+            "preprocessing_state": _cpu_tree(preprocessing_state),
             "config": config_container(cfg),
             "torch_rng_state": torch.get_rng_state(),
         },

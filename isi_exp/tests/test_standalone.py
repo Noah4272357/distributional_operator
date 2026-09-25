@@ -15,11 +15,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from data import generate_isi_lif_laws  # noqa: E402
-from scripts import isi_law_to_law  # noqa: E402
-from src.models.build_model import build_model  # noqa: E402
+from src.models.build_model import SUPPORTED_MODELS, build_model  # noqa: E402
 from src.models.kernel_regression import ISIKernelRegression  # noqa: E402
 from src.training.factory import build_optimizer, build_scheduler  # noqa: E402
 from src.training.metrics import categorical_metrics_against_empirical  # noqa: E402
+from src.training.trainer import EarlyStopping  # noqa: E402
+from src.utils.checkpoint import CHECKPOINT_SELECTION_METRIC  # noqa: E402
 from src.utils.config import load_config
 from src.data.dataloader import split_dataset_payload  # noqa: E402
 
@@ -30,26 +31,44 @@ def _train_payload() -> dict[str, object]:
         "input_particles": torch.ones(3, 6),
         "normalized_params": torch.ones(3, 2),
         "input_features": torch.ones(3, 18),
+        "process_features": torch.ones(3, 6, 7),
     }
 
 
 def test_configs_load_and_preserve_selection_metric() -> None:
     cfg = load_config("configs/config.yaml")
-    assert cfg.training.checkpoint_selection_metric == isi_law_to_law.CHECKPOINT_SELECTION_METRIC
+    assert cfg.training.checkpoint_selection_metric == CHECKPOINT_SELECTION_METRIC
     assert cfg.data.train_size + cfg.data.val_size + cfg.data.test_size == 24
+    assert cfg.training.early_stopping.enabled is True
+    assert cfg.training.early_stopping.patience == 30
+    assert cfg.training.early_stopping.min_delta == pytest.approx(0.001)
+
+    long_cfg = load_config("configs/feature_mlp.yaml")
+    assert long_cfg.training.epochs == 1000
+    assert long_cfg.scheduler.patience == 20
+    assert long_cfg.training.early_stopping.enabled is True
 
 
 def test_factory_builds_every_preserved_model() -> None:
-    cfg = load_config("configs/config.yaml")
+    assert SUPPORTED_MODELS == {"distribution_operator", "isi_feature_mlp", "kernel_regression"}
+    feature_cfg = load_config("configs/config.yaml")
     batch = {
         "input_particles": torch.ones(3, 6),
-        "normalized_params": torch.ones(3, 2),
         "input_features": torch.ones(3, 18),
+        "process_features": torch.ones(3, 6, 7),
     }
-    for name in ("isi_context_deepsets", "isi_param_mlp", "isi_feature_mlp"):
-        cfg.model.name = name
-        prediction = build_model(cfg.model, _train_payload())(batch)
-        assert prediction["logits"].shape == (3, 5)
+    feature_prediction = build_model(feature_cfg.model, _train_payload())(batch)
+    assert feature_prediction["logits"].shape == (3, 5)
+
+    process_cfg = load_config("configs/process_train_1000.yaml")
+    process_cfg.model.truncate_dim = 7
+    process_prediction = build_model(process_cfg.model, _train_payload())(batch)
+    assert process_prediction["logits"].shape == (3, 5)
+
+    for archived_name in ("isi_context_deepsets", "isi_param_mlp"):
+        feature_cfg.model.name = archived_name
+        with pytest.raises(ValueError, match="unsupported ISI model"):
+            build_model(feature_cfg.model, _train_payload())
 
 
 def test_kernel_regression_uses_the_shared_prediction_api() -> None:
@@ -73,22 +92,8 @@ def test_kernel_regression_uses_the_shared_prediction_api() -> None:
     assert sum(parameter.numel() for parameter in model.parameters()) == 0
 
 
-def test_compatibility_facades_expose_original_apis() -> None:
+def test_generation_api_remains_available() -> None:
     assert callable(generate_isi_lif_laws.generate_isi_lif_dataset)
-    assert callable(isi_law_to_law.run_isi_experiment)
-    assert callable(isi_law_to_law.compute_isi_loss)
-    legacy = OmegaConf.create(
-        {
-            "generated_data": {"file": "dataset.pt"},
-            "model": {"name": "isi_global_constant"},
-            "optimizer": {"name": "adam", "lr": 1.0e-3, "weight_decay": 0.0},
-            "scheduler": {"name": "none"},
-            "experiment": {"seed": 7, "device": "cpu", "epochs": 3, "batch_size": 5},
-        }
-    )
-    adapted = isi_law_to_law._adapt_legacy_config(legacy)
-    assert adapted.training.epochs == 3
-    assert adapted.data.batch_size == 5
 
 
 def test_dataloader_owns_deterministic_splitting() -> None:
@@ -133,7 +138,7 @@ def test_cli_help() -> None:
         "data/generate_isi_lif_laws.py",
         "scripts/train.py",
         "scripts/evaluate.py",
-        "pred_heatmap.py",
+        "scripts/pred_heatmap.py",
     ):
         completed = subprocess.run(
             [sys.executable, script, "--help"],
@@ -209,3 +214,18 @@ def test_validation_metrics_are_limited_to_requested_set() -> None:
     expected_kl = (empirical * (empirical / predicted).log()).sum().item()
     assert metrics["hellinger_distance_against_empirical"] == pytest.approx(expected_hellinger)
     assert metrics["kl_divergence_against_empirical"] == pytest.approx(expected_kl)
+
+
+def test_early_stopping_uses_patience_and_minimum_delta() -> None:
+    stopping = EarlyStopping(enabled=True, patience=3, min_delta=0.1)
+    assert stopping.update(1.0) is False
+    assert stopping.update(0.95) is False
+    assert stopping.update(0.85) is False
+    assert stopping.epochs_without_improvement == 0
+    assert stopping.update(0.80) is False
+    assert stopping.update(0.79) is False
+    assert stopping.update(0.78) is True
+
+    disabled = EarlyStopping(enabled=False, patience=1, min_delta=0.0)
+    assert disabled.update(1.0) is False
+    assert disabled.update(1.0) is False

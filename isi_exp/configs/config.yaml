@@ -1,5 +1,5 @@
 experiment:
-  name: isi_law_to_law
+  name: isi_feature_mlp_smoke
   output_root: experiments
   seed: 0
   device: cpu
@@ -15,14 +15,9 @@ data:
   pin_memory: false
 
 model:
-  name: isi_context_deepsets
+  name: isi_feature_mlp
   hidden_width: 32
   hidden_layers: 1
-  inner_width: 32
-  inner_layers: 1
-  embedding_dim: 32
-  outer_width: 32
-  outer_layers: 1
   activation: gelu
 
 optimizer:
@@ -31,7 +26,6 @@ optimizer:
   weight_decay: 0.01
 
 scheduler:
-  # Options: reduce_lr_on_plateau, cosine_annealing, step_lr, none
   name: reduce_lr_on_plateau
   mode: min
   factor: 0.5
@@ -41,15 +35,14 @@ scheduler:
   cooldown: 0
   min_lr: 1.0e-6
   eps: 1.0e-8
-  # Used by cosine_annealing.
-  t_max: 300
-  eta_min: 1.0e-6
-  # Used by step_lr.
-  step_size: 50
-  gamma: 0.5
 
 training:
   epochs: 2
+  epoch_metrics: nll_only
   grad_clip: null
   save_last: true
+  early_stopping:
+    enabled: true
+    patience: 30
+    min_delta: 0.001
   checkpoint_selection_metric: val.observable_metrics.observation_nll

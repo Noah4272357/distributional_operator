@@ -6,7 +6,7 @@ from typing import Any
 
 from torch import nn
 
-from src.models.deepsets import DeepSets
+from src.models.distributional_operator import DistributionalOperator
 from src.models.kernel_regression import KernelRegression
 from src.models.momentmlp import MomentMLP
 
@@ -38,8 +38,8 @@ def build_model(
         "covariance_structure": str(model_cfg.get("covariance_structure", "full")),
         "covariance_rank": int(model_cfg.get("covariance_rank", 4)),
     }
-    if name == "deepsets":
-        return DeepSets(
+    if name in {"distributional_operator", "deepsets"}:
+        return DistributionalOperator(
             input_dim=input_dim,
             q_out=output_dim,
             inner_width=int(model_cfg.inner_width),
@@ -60,6 +60,6 @@ def build_model(
             **head_kwargs,
         )
     raise ValueError(
-        f"unsupported model: {name}; expected deepsets, momentmlp, "
+        f"unsupported model: {name}; expected distributional_operator, momentmlp, "
         "or kernel_regression"
     )

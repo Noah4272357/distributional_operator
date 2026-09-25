@@ -1,61 +1,129 @@
-# ISI law-to-law experiment
+# ISI distribution-learning experiments
 
-This is a standalone refactor of the former `experiments/isi_law_to_law.py`
-and `experiments/generate_isi_lif_laws.py` pipeline. Domain behavior is
-preserved, while configuration, data, models, training, evaluation,
-checkpointing, logging, and reproducibility have separate responsibilities.
+The active training code preserves three model pipelines:
 
-## Quick start
+- `distribution_operator`: predicts the ISI law from PCA-compressed stochastic-process paths;
+- `isi_feature_mlp`: predicts the ISI law from fixed moment and Fourier features; and
+- `kernel_regression`: a nonparametric Nadaraya--Watson reference based on empirical input laws.
+
+## Environment and data
+
+Python 3.9–3.12 and [`uv`](https://docs.astral.sh/uv/) are required. The lock
+file selects the PyTorch 2.7.1 build for CUDA 12.6 used for the reported runs.
 
 ```bash
-uv sync
+uv sync --frozen --all-groups
 uv run data/generate_isi_lif_laws.py \
-  --data-size 24 --sample-size 16 --n-isi 16 \
-  --output generated/isi_lif_laws_smoke.h5
-uv run scripts/train.py
+  --data-size 1200 --sample-size 200 --n-isi 200 \
+  --output data/generated/isi_distribution_dataset.h5
+uv run data/generate_isi_process_data.py \
+  --source data/generated/isi_distribution_dataset.h5 \
+  --output data/generated/isi_process_data.h5
+```
+
+The categorical target file contains the 49-bin ISI distributions, input
+particles, and fixed features. The process file contains 200 trajectories on
+256 time points for every law. See
+[data/process_protocol.md](data/process_protocol.md) for the complete data and
+preprocessing protocol.
+
+## Train the retained models
+
+```bash
+# Process distribution operator
+uv run scripts/train.py --config configs/process_train_1000.yaml
+
+# Fixed-feature MLP
+uv run scripts/train.py --config configs/feature_mlp.yaml
+
+# Kernel regression
+uv run scripts/train.py --config configs/kernel_regression.yaml
+```
+
+The default `configs/config.yaml` is a small feature-MLP smoke configuration.
+Configuration overrides use OmegaConf dot-list syntax, for example:
+
+```bash
+uv run scripts/train.py --config configs/feature_mlp.yaml training.epochs=20
+```
+
+Each run creates a directory containing the resolved configuration, logs,
+metrics, prediction curves, and checkpoints. Evaluate any retained model with:
+
+```bash
 uv run scripts/evaluate.py --checkpoint experiments/<run>/model_ckpt/best.pt
 ```
 
-Configuration overrides use OmegaConf dot-list syntax:
+The process-operator five-seed launcher is:
 
 ```bash
-uv run scripts/train.py training.epochs=20
+bash scripts/run_5_seeds.sh
 ```
 
-Each training run receives a unique directory under `experiments/` with the
-resolved `config.yaml`, `train.log`, metrics, prediction curves, and
-resumable `best.pt` and `last.pt` checkpoints.
-
-Dataset generation is self-contained in `data/` and depends on PyTorch and h5py.
-It writes one compact dataset; `src/data/dataloader.py` creates deterministic
-train, validation, and test subsets. See [data/README.md](data/README.md).
-
-## Kernel-regression comparison
-
-`kernel_regression` is a nonparametric Nadaraya-Watson baseline. It uses the
-same HDF5 dataset, deterministic split, target masses, and evaluation metrics
-as `isi_context_deepsets`. Its input-law distance is the existing finite
-piecewise-uniform W2 implementation.
+Create a publication heatmap from any retained model checkpoint with:
 
 ```bash
-uv run scripts/train.py --config configs/table3.yaml \
-  --run-name isi_context_deepsets_seed0 experiment.seed=0
-uv run scripts/train.py --config configs/kernel_regression.yaml \
-  --run-name kernel_regression_seed0
+uv run scripts/pred_heatmap.py \
+  --checkpoint experiments/<run>/model_ckpt/best.pt \
+  --split val \
+  --output experiments/<run>/pred_heatmap.pdf
 ```
 
-The two `results.json` files have the same metric schema. `run.sh` runs five
-DeepSets seeds and the deterministic kernel baseline, then writes their test
-comparison to `experiments/table3_matrix/aggregate.json` and
-`table3_rows.tex`.
+Use `--split test` for the process distribution operator, whose current
+configuration has a held-out test split rather than a validation split.
 
-The generated HDF5 dataset also includes normalized drive parameters and
-moment/RFF input features, so the parametric and fixed-feature models use the
-same splits and targets:
+## Active scripts
 
-```bash
-uv run scripts/train.py --config configs/table3.yaml \
-  --run-name isi_param_mlp_seed0 model.name=isi_param_mlp
-uv run scripts/train.py --config configs/table3.yaml \
-  --run-name isi_feature_mlp_seed0 model.name=isi_feature_mlp
+The `scripts/` directory contains only entry points for running, evaluating,
+or plotting the retained models:
+
+```text
+scripts/
+  __init__.py
+  train.py
+  train.sh
+  evaluate.py
+  evaluate.sh
+  run_5_seeds.sh
+  pred_heatmap.py
 ```
+
+`train.py` and `evaluate.py` support all three active model names through the
+shared factory. `run_5_seeds.sh` runs the configured distribution operator for
+seeds 0 through 4. `pred_heatmap.py` creates PDF and PNG comparisons of target
+and predicted distributions.
+
+## Active model layout
+
+```text
+src/models/
+  build_model.py
+  components.py
+  distribution_operator.py
+  feature_mlp.py
+  kernel_regression.py
+```
+
+`build_model.py` accepts only `distribution_operator`, `isi_feature_mlp`, and
+`kernel_regression`. Shared MLP and categorical-output utilities live in
+`components.py`.
+
+## Project layout
+
+```text
+isi_exp/
+├── configs/       # Retained experiment configurations
+├── data/          # Dataset generators and preprocessing protocol
+├── scripts/       # Training, evaluation, plotting, and seed sweeps
+├── src/
+│   ├── data/      # Dataset loading and process preprocessing
+│   ├── models/    # The three retained model pipelines
+│   ├── training/  # Losses, metrics, validation, and training
+│   └── utils/     # Checkpoints, configuration, logging, and reporting
+├── tests/         # Standalone and data-generation tests
+├── pyproject.toml
+└── uv.lock
+```
+
+Generated datasets under `data/generated/` and run outputs under
+`experiments/` are excluded from version control.

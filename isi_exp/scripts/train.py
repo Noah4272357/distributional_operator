@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import torch
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -31,7 +33,18 @@ def run_training(
     """Assemble configured components and delegate coordination to Trainer."""
     seed_everything(int(cfg.experiment.seed))
     device = resolve_device(str(cfg.experiment.device))
-    payloads = load_split_payloads(cfg.data, map_location="cpu")
+    payloads = load_split_payloads(
+        cfg.data,
+        map_location="cpu",
+        truncate_dim=cfg.model.get("truncate_dim", "auto"),
+    )
+    preprocessing_state = payloads.get("_preprocessing_state")
+    if preprocessing_state is not None:
+        cfg.model.truncate_dim = int(preprocessing_state["selected_dim"])
+        cfg.data.pca.selected_dim = int(preprocessing_state["selected_dim"])
+        cfg.data.pca.achieved_explained_variance_ratio = float(
+            preprocessing_state["achieved_explained_variance_ratio"]
+        )
     dataloaders = build_dataloaders(cfg.data, payloads)
     model = build_model(cfg.model, payloads["train"]).to(device)
     trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
@@ -43,10 +56,22 @@ def run_training(
         else Path(run_dir)
     )
     output_dir.mkdir(parents=True, exist_ok=True)
+    if preprocessing_state is not None:
+        torch.save(preprocessing_state, output_dir / str(cfg.data.pca.get("state_file", "pca_state.pt")))
     save_resolved_config(cfg, output_dir / "config.yaml")
     logger = build_logger(output_dir)
     logger.info("run_dir=%s device=%s model=%s", output_dir, device, cfg.model.name)
-    trainer = Trainer(cfg, model, dataloaders, optimizer, scheduler, device, output_dir, logger)
+    trainer = Trainer(
+        cfg,
+        model,
+        dataloaders,
+        optimizer,
+        scheduler,
+        device,
+        output_dir,
+        logger,
+        preprocessing_state=preprocessing_state,
+    )
     return trainer.fit(resume=resume), output_dir
 
 
@@ -64,7 +89,16 @@ def main(argv: list[str] | None = None) -> None:
     cfg = load_config(args.config, args.overrides)
     results, run_dir = run_training(cfg, resume=args.resume, run_name=args.run_name)
     print(f"model_name: {results['model_name']}")
-    print(f"best_val_observation_nll: {results['metrics_by_split']['val']['observable_metrics']['observation_nll']}")
+    if "val" in results["metrics_by_split"]:
+        print(
+            "best_val_observation_nll: "
+            f"{results['metrics_by_split']['val']['observable_metrics']['observation_nll']}"
+        )
+    elif "test" in results["metrics_by_split"]:
+        print(
+            "test_observation_nll: "
+            f"{results['metrics_by_split']['test']['observable_metrics']['observation_nll']}"
+        )
     print(f"results_json: {run_dir / 'results.json'}")
 
 

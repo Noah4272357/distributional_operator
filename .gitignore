@@ -1,26 +1,49 @@
-# Python
+# Python bytecode, environments, and tool caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .venv/
 venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
 
-# VS Code
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Editors
 .vscode/
+.idea/
+*.swp
+*.swo
 
 # macOS
 .DS_Store
 
-# ML outputs
+# Generated ML outputs
 checkpoints/
 runs/
 wandb/
+tensorboard/
+experiments/
+artifacts/
+outputs/
 *.pt
 *.pth
-
-# Data if large
-data/
-*.h5
-
-# Experiments
-experiments/
+*.ckpt
 *.log
+
+# Generated datasets (keep generation and loader source code trackable)
+*.h5
+*.hdf5
+
+# Temporary files
+*.tmp
+*.bak

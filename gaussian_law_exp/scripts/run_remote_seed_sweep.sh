@@ -10,7 +10,7 @@ mkdir -p "$LOG_DIR"
 
 for seed in 0 1 2 3 4; do
   for specification in \
-    "deepsets:configs/deepsets_config.yaml" \
+    "distributional_operator:configs/distributional_operator_config.yaml" \
     "momentmlp:configs/mlp_config.yaml"; do
     model_name="${specification%%:*}"
     config_path="${specification#*:}"

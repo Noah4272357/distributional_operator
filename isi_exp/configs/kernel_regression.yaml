@@ -5,10 +5,10 @@ experiment:
   device: cpu
 
 data:
-  file: data/generated/isi_lif_laws.h5
-  train_size: 999
-  val_size: 120
-  test_size: 120
+  file: data/generated/isi_distribution_dataset.h5
+  train_size: 1000
+  val_size: 200
+  test_size: 0
   split_seed: 0
   batch_size: 64
   num_workers: 0
@@ -31,4 +31,8 @@ training:
   epoch_metrics: nll_only
   grad_clip: null
   save_last: true
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
   checkpoint_selection_metric: val.observable_metrics.observation_nll

@@ -1,0 +1,39 @@
+{
+  "seed": 42,
+  "data": {
+    "input_path": "duffing_dataset/duffing_dataset.h5",
+    "input_dataset": "X",
+    "target_path": "duffing_dataset/duffing_dataset.h5",
+    "target_dataset": "Y",
+    "train_size": 1000,
+    "validation_size": 200,
+    "law_sample_count": 64,
+    "query_batch_size": 2
+  },
+  "model": {
+    "name": "kernel_regression",
+    "bandwidth_candidates": [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0],
+    "sinkhorn_p": 2,
+    "sinkhorn_blur": 0.05,
+    "sinkhorn_debias": true,
+    "sinkhorn_scaling": 0.5,
+    "sinkhorn_backend": "tensorized",
+    "reference_chunk_size": 4
+  },
+  "loss": {
+    "name": "sinkhorn",
+    "p": 2,
+    "blur": 0.05,
+    "debias": true,
+    "scaling": 0.5,
+    "backend": "tensorized",
+    "reduction": "mean"
+  },
+  "training": {
+    "device": "cuda"
+  },
+  "experiment": {
+    "root": "experiments",
+    "run_name": "duffing_kernel_regression_geomloss"
+  }
+}

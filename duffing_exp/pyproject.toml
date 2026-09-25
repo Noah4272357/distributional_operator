@@ -1,0 +1,32 @@
+[project]
+name = "duffing-exp"
+version = "0.1.0"
+description = "Distributional operator experiments for stochastic Duffing oscillators"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "geomloss==0.3.1",
+    "h5py==3.16.0",
+    "matplotlib==3.10.9",
+    "numpy==2.2.6",
+    "psutil==7.2.2",
+    "scipy==1.15.3",
+    "torch==2.6.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

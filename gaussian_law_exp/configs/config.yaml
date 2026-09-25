@@ -14,8 +14,8 @@ data:
   pin_memory: false
 
 model:
-  # Options: deepsets, momentmlp, kernel_regression
-  name: deepsets
+  # Options: distributional_operator, momentmlp, kernel_regression
+  name: distributional_operator
   hidden_width: 128
   hidden_layers: 2
   inner_width: 64

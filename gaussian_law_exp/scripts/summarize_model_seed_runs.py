@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize seeded DeepSets/MLP runs with a kernel-regression baseline."""
+"""Summarize seeded distributional-operator/MLP runs and the kernel baseline."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ METRICS = {
     "KL Divergence": "kl_divergence",
     "Hellinger Distance": "hellinger_distance",
 }
-SEEDED_MODELS = ("deepsets", "momentmlp")
+SEEDED_MODELS = ("distributional_operator", "momentmlp")
 
 
 def _read_validation_metrics(path: Path) -> dict[str, float]:

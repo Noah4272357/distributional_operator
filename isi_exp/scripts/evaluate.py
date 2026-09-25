@@ -47,7 +47,14 @@ def main(argv: list[str] | None = None) -> None:
         raise ValueError("legacy checkpoint has no embedded config; pass --config")
     seed_everything(int(cfg.experiment.seed))
     device = resolve_device(str(cfg.experiment.device))
-    payloads = load_split_payloads(cfg.data)
+    preprocessing_state = checkpoint.get("preprocessing_state")
+    if cfg.data.get("process_file") is not None and preprocessing_state is None:
+        raise ValueError("distribution-operator checkpoint is missing its PCA preprocessing state")
+    payloads = load_split_payloads(
+        cfg.data,
+        preprocessing_state=preprocessing_state,
+        truncate_dim=cfg.model.get("truncate_dim", "auto"),
+    )
     dataloaders = build_dataloaders(cfg.data, payloads, shuffle_train=False)
     model = build_model(cfg.model, payloads["train"]).to(device)
     restore_checkpoint(checkpoint, model, device)
@@ -60,4 +67,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-

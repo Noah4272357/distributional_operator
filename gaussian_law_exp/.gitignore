@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+experiments/*
+!experiments/.gitkeep
+data/dataset.h5
+data/*.log
+data/moment_covariance_comparison.json
+error.log
+summary.csv
+seed*_loss.png
